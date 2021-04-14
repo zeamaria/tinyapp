@@ -25,6 +25,21 @@ app.post("/urls", (req, res) => {
   res.redirect(`/urls/${shortURL}`);
 });
 
+app.post("/urls/:shortURL/delete", (req, res) => {
+  let shortURL = req.params.shortURL;
+  delete urlDatabase[shortURL];
+  res.redirect(`/urls`);
+});
+
+app.post("/urls/:shortURL", (req, res) => {
+  // define short url
+  let shortURL = req.params.shortURL;
+  // take in the new url // replace old url
+  urlDatabase[shortURL] = req.body.longURL;
+  // redirect to new url 
+  res.redirect(`/urls`);
+});
+
 app.get("/", (req, res) => {
   res.send("Hello!");
 });

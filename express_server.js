@@ -10,6 +10,7 @@ app.use(bodyParser.urlencoded({extended: true}));
 const cookieParser = require('cookie-parser');
 app.use(cookieParser());
 
+
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
@@ -43,11 +44,85 @@ app.post("/urls/:shortURL", (req, res) => {
   res.redirect(`/urls`);
 });
 
-app.post('/login', function (req, res) {
-  let username = req.body.username;
-  res.cookie('username', username);
-  res.redirect(`/urls`);
+// Login Routes
+
+app.get("/login",(req,res) => {
+  res.render("login");
 });
+
+
+
+// // login submit handler
+app.post("/login", function (req, res) {
+  
+  
+  const username = req.body.username;
+  const testPassword = req.body.password;
+  
+  // if(users[username] && users[username] === testPassword){
+    res.cookie("username", username);
+    res.redirect("/urls")
+  //   return;
+  //   // res.end()
+  // } 
+  //   res.redirect("/login");
+  
+});
+
+// Register Routes
+app.get('/register', (req,res) => {
+  res.render("register");
+});
+
+
+app.post("/register", function (req, res) {
+  res.cookie("username", username);
+  res.redirect("/register")
+  //type=email
+  //name=email
+  //type=password
+  //POST to /register
+
+})
+
+
+
+
+// Profile page
+app.get('/profile'), (req,res) =>{
+  console.log("test req.cookies:", req.cookies)
+
+ 
+  
+  if(users[req.cookies.user]){
+    const templateVars = {
+      username:users[req.cookies.user],
+      testPassword: users[req.cookies.user]
+    };
+    res.render('profile',templateVars)
+  } else {
+    res.redirect("/login")
+  }
+}
+
+// logout Route
+
+app.get("/logout", (req, res) => {
+  res.clearCookie("user");
+  res.redirect("/");
+});
+
+app.post("/logout", function (req, res) {
+  res.clearCookie("username");
+  res.redirect("/urls");
+});
+
+
+
+// plain text values should not be stored in cookies 
+
+
+
 
 app.get("/", (req, res) => {
   res.send("Hello!");

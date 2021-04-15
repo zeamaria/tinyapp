@@ -26,10 +26,7 @@ let users = {
   }
 }
 
-const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
-};
+const urlDatabase = {};
 
 // FUNCTIONS
 
@@ -68,20 +65,44 @@ function getLoggedInUser(req, res) {
   return user;
 }
 
+// MIDDLEWARE
+// check if cookie getLoggedInUser returns empty object then redirect to login page / deny access
+
+
+
 
 // SHORT URLS
 
+app.get("/urls", (req, res) => {
+  const templateVars = {
+    urls: urlDatabase,
+    user: getLoggedInUser(req, res)
+  };
+  res.render("urls_index", templateVars);
+});
+
+app.get("/urls/new", (req, res) => {
+  const templateVars = { 
+    user: getLoggedInUser(req, res)
+  };
+  res.render("urls_new", templateVars);
+});
+
 app.post("/urls", (req, res) => {
+  let user = getLoggedInUser(req, res);
   let shortURL = generateRandomString(6);
-  urlDatabase[shortURL] = req.body.longURL;
+  urlDatabase[shortURL] = {
+    longURL: req.body.longURL,
+    userID: user.id
+  };
   res.redirect(`/urls/${shortURL}`);
 });
 
 app.get("/urls/:shortURL", (req, res) => {
   const templateVars = { 
     shortURL: req.params.shortURL,
-    longURL: urlDatabase[req.params.shortURL],
-    username: req.cookies["username"]
+    longURL: urlDatabase[req.params.shortURL].longURL,
+    user: getLoggedInUser(req, res)
   };
   res.render("urls_show", templateVars);
 });
@@ -90,13 +111,13 @@ app.post("/urls/:shortURL", (req, res) => {
   // define short url
   let shortURL = req.params.shortURL;
   // take in the new url // replace old url
-  urlDatabase[shortURL] = req.body.longURL;
+  urlDatabase[shortURL].longURL = req.body.longURL;
   // redirect to new url 
   res.redirect(`/urls`);
 });
 
 app.get("/u/:shortURL", (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL];
+  const longURL = urlDatabase[req.params.shortURL].longURL;
   res.redirect(longURL);
 });
 
@@ -201,22 +222,6 @@ app.get("/", (req, res) => {
   res.redirect("/urls");
 });
 
-app.get("/urls", (req, res) => {
-  const templateVars = {
-    urls: urlDatabase,
-    username: req.cookies["username"],
-    user: getLoggedInUser(req, res)
-  };
-  res.render("urls_index", templateVars);
-});
-
-app.get("/urls/new", (req, res) => {
-  const templateVars = { 
-    user: getLoggedInUser(req, res)
-  };
-  res.render("urls_new", templateVars);
-});
-
 // OLD ROUTES
 
 app.get("/urls.json", (req, res) => {
@@ -232,4 +237,3 @@ app.get("/hello", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
-

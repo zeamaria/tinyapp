@@ -145,6 +145,15 @@ app.post("/register", function (req, res) {
   let email    = req.body.email;
   let password = req.body.password;
   let userId   = generateRandomString(32);
+  // check if email or pw are empty 
+
+  if( !email || !password ){
+    res.status(400).send("Please include both a valid email and password!");
+  }
+  // send back response with 400 status code
+  // check if someone tries to register with an email that is already in users object
+  // send back response with 400 status code
+  // create helper function to check for email in users object(getUserByEmail)
 
   users[userId] = {
     id: userId, 

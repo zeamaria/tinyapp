@@ -56,11 +56,13 @@ function getUserByEmail(email, password) {
 
 function getLoggedInUser(req, res) {
   let user = {};
-  if(req.cookies.user_id && req.cookies.user_id !== "undefined" && typeof req.cookies.user_id !== "undefined") {
-    if(users[req.cookies.user_id]) {
-      user = users[req.cookies.user_id];
-    } else {
-      res.clearCookie("user_id");
+  if(req.cookies.user && req.cookies.user !== "undefined" && typeof req.cookies.user !== "undefined") {
+    if(req.cookies.user.hasOwnProperty('id')) {
+      if(users[req.cookies.user.id]) {
+        user = req.cookies.user;
+      } else {
+        res.clearCookie("user");
+      }
     }
   }
   return user;
@@ -108,7 +110,10 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 // LOGIN ROUTE
 
 app.get("/login",(req,res) => {
-  res.render("login",);
+  const templateVars = {
+    user: {}
+  };
+  res.render("login", templateVars);
 });
 
 app.post("/login", function (req, res) {
@@ -116,20 +121,23 @@ app.post("/login", function (req, res) {
   const password = req.body.password;
 
   const user = getUserByEmail(email, password);
-  
-  if(user){
-    res.cookie("user", user);
-    res.redirect("/urls")
-    res.end()
-  }
 
-  res.redirect("/login"); 
+  if( !email ){
+    return res.status(403).send("User email or password cannot be found. Please include both a valid username AND password!");
+  };
+
+  if ( !password ){
+    return res.status(403).send("Incorrect password");
+  } else {
+    res.cookie("user", user);
+    return res.redirect("/urls");
+  };
 });
 
 // LOGOUT ROUTE
 
 app.post("/logout", function (req, res) {
-  res.clearCookie("user_id");
+  res.clearCookie("user");
   res.redirect("/urls");
 });
 
@@ -142,16 +150,21 @@ app.get('/register', (req,res) => {
 });
 
 app.post("/register", function (req, res) {
+  // create helper function to check for email in users object(getUserByEmail)
   let email    = req.body.email;
   let password = req.body.password;
   // check if email or pw are empty/ exists
 
   if( !email || !password ){
-    res.status(400).send("Please include both a valid email and password!");
+    // send back response with 400 status code
+    res.status(400).send("Please include both a valid email AND password!");
     return;
   }
   
+   
+  // check if someone tries to register with an email that is already in users object
   if (getUserByEmail(email)){
+  // send back response with 400 status code
     res.status(400).send("I am sorry user already exists!");
     return;
   }
@@ -159,14 +172,9 @@ app.post("/register", function (req, res) {
   const id = generateRandomString(8)
   const user = {id, email, password}
 
-  // send back response with 400 status code
-  // check if someone tries to register with an email that is already in users object
-  // send back response with 400 status code
-  // create helper function to check for email in users object(getUserByEmail)
+  users[user.id] = user;
 
-  users[userId] = user;
-
-  res.cookie("user_id", id);
+  res.cookie("user", user);
   res.redirect("/urls");
 });
 

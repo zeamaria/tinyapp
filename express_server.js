@@ -144,27 +144,31 @@ app.get('/register', (req,res) => {
 app.post("/register", function (req, res) {
   let email    = req.body.email;
   let password = req.body.password;
-  let userId   = generateRandomString(32);
-  // check if email or pw are empty 
+  // check if email or pw are empty/ exists
 
   if( !email || !password ){
     res.status(400).send("Please include both a valid email and password!");
+    return;
   }
+  
+  if (getUserByEmail(email)){
+    res.status(400).send("I am sorry user already exists!");
+    return;
+  }
+
+  const id = generateRandomString(8)
+  const user = {id, email, password}
+
   // send back response with 400 status code
   // check if someone tries to register with an email that is already in users object
   // send back response with 400 status code
   // create helper function to check for email in users object(getUserByEmail)
 
-  users[userId] = {
-    id: userId, 
-    email: email,
-    password: password
-  }
+  users[userId] = user;
 
-  res.cookie("user_id", userId);
-
-  res.redirect("/urls")
-})
+  res.cookie("user_id", id);
+  res.redirect("/urls");
+});
 
 
 // PROFILE PAGE

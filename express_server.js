@@ -1,3 +1,4 @@
+// CONFIGURE  
 const express = require("express");
 const app = express();
 const PORT = 8080; // default port 8080
@@ -10,11 +11,27 @@ app.use(bodyParser.urlencoded({extended: true}));
 const cookieParser = require('cookie-parser');
 app.use(cookieParser());
 
+// DATABASES
+
+let users = { 
+  "userRandomID": {
+    id: "userRandomID", 
+    email: "user@example.com", 
+    password: "purple-monkey-dinosaur"
+  },
+  "user2RandomID": {
+    id: "user2RandomID", 
+    email: "user2@example.com", 
+    password: "dishwasher-funk"
+  }
+}
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
+
+// FUNCTIONS
 
 function generateRandomString(length) {
   let chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -23,16 +40,48 @@ function generateRandomString(length) {
   return result;
 }
 
+function getUserByEmail(email, password) {
+  // loop through users and check if email exists
+  for (const key in users) {
+    if(users[key].email === email) {
+      // email found, now check passwords match
+      if(users[key].password === password) {
+        return users[key];
+      }
+    }
+  }
+
+  return false;
+}
+
+function getLoggedInUser(req, res) {
+  let user = {};
+  if(req.cookies.user_id && req.cookies.user_id !== "undefined" && typeof req.cookies.user_id !== "undefined") {
+    if(users[req.cookies.user_id]) {
+      user = users[req.cookies.user_id];
+    } else {
+      res.clearCookie("user_id");
+    }
+  }
+  return user;
+}
+
+
+// SHORT URLS
+
 app.post("/urls", (req, res) => {
   let shortURL = generateRandomString(6);
   urlDatabase[shortURL] = req.body.longURL;
   res.redirect(`/urls/${shortURL}`);
 });
 
-app.post("/urls/:shortURL/delete", (req, res) => {
-  let shortURL = req.params.shortURL;
-  delete urlDatabase[shortURL];
-  res.redirect(`/urls`);
+app.get("/urls/:shortURL", (req, res) => {
+  const templateVars = { 
+    shortURL: req.params.shortURL,
+    longURL: urlDatabase[req.params.shortURL],
+    username: req.cookies["username"]
+  };
+  res.render("urls_show", templateVars);
 });
 
 app.post("/urls/:shortURL", (req, res) => {
@@ -44,97 +93,110 @@ app.post("/urls/:shortURL", (req, res) => {
   res.redirect(`/urls`);
 });
 
-// Login Routes
+app.get("/u/:shortURL", (req, res) => {
+  const longURL = urlDatabase[req.params.shortURL];
+  res.redirect(longURL);
+});
+
+app.post("/urls/:shortURL/delete", (req, res) => {
+  let shortURL = req.params.shortURL;
+  delete urlDatabase[shortURL];
+  res.redirect(`/urls`);
+});
+
+
+// LOGIN ROUTE
 
 app.get("/login",(req,res) => {
-  res.render("login");
+  res.render("login",);
 });
 
-
-
-// // login submit handler
 app.post("/login", function (req, res) {
+  const email    = req.body.email;
+  const password = req.body.password;
+
+  const user = getUserByEmail(email, password);
   
-  
-  const username = req.body.username;
-  const testPassword = req.body.password;
-  
-  // if(users[username] && users[username] === testPassword){
-    res.cookie("username", username);
+  if(user){
+    res.cookie("user", user);
     res.redirect("/urls")
-  //   return;
-  //   // res.end()
-  // } 
-  //   res.redirect("/login");
-  
+    res.end()
+  }
+
+  res.redirect("/login"); 
 });
 
-// Register Routes
+// LOGOUT ROUTE
+
+app.post("/logout", function (req, res) {
+  res.clearCookie("user_id");
+  res.redirect("/urls");
+});
+
+// REGISTER ROUTES
 app.get('/register', (req,res) => {
-  res.render("register");
+  const templateVars = { 
+    user: {}
+  };
+  res.render("register", templateVars);
 });
-
 
 app.post("/register", function (req, res) {
-  res.cookie("username", username);
-  res.redirect("/register")
-  //type=email
-  //name=email
-  //type=password
-  //POST to /register
+  let email    = req.body.email;
+  let password = req.body.password;
+  let userId   = generateRandomString(32);
 
+  users[userId] = {
+    id: userId, 
+    email: email,
+    password: password
+  }
+
+  res.cookie("user_id", userId);
+
+  res.redirect("/urls")
 })
 
 
-
-
-// Profile page
+// PROFILE PAGE
 app.get('/profile'), (req,res) =>{
   console.log("test req.cookies:", req.cookies)
 
- 
-  
   if(users[req.cookies.user]){
     const templateVars = {
       username:users[req.cookies.user],
       testPassword: users[req.cookies.user]
     };
-    res.render('profile',templateVars)
+    res.render('profile', templateVars);
   } else {
-    res.redirect("/login")
+    res.redirect("/login");
   }
 }
 
-// logout Route
 
-app.get("/logout", (req, res) => {
-  res.clearCookie("user");
-  res.redirect("/");
-});
+// HOMEPAGE
 
-app.post("/logout", function (req, res) {
-  res.clearCookie("username");
+app.get("/", (req, res) => {
   res.redirect("/urls");
 });
 
-
-
-// plain text values should not be stored in cookies 
-
-
-
-
-app.get("/", (req, res) => {
-  res.send("Hello!");
-});
-
 app.get("/urls", (req, res) => {
-  const templateVars = { 
+  const templateVars = {
     urls: urlDatabase,
-    username: req.cookies["username"]
+    username: req.cookies["username"],
+    user: getLoggedInUser(req, res)
   };
   res.render("urls_index", templateVars);
 });
+
+app.get("/urls/new", (req, res) => {
+  const templateVars = { 
+    user: getLoggedInUser(req, res)
+  };
+  res.render("urls_new", templateVars);
+});
+
+// OLD ROUTES
 
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
@@ -144,28 +206,8 @@ app.get("/hello", (req, res) => {
   res.send("<html><body>Hello <b>World</b></body></html>\n");
 });
 
-app.get("/urls/new", (req, res) => {
-  const templateVars = { 
-    username: req.cookies["username"]
-  };
-  res.render("urls_new", templateVars);
-});
 
-
-app.get("/urls/:shortURL", (req, res) => {
-  const templateVars = { 
-    shortURL: req.params.shortURL,
-    longURL: urlDatabase[req.params.shortURL],
-    username: req.cookies["username"]
-  };
-  res.render("urls_show", templateVars);
-});
-
-app.get("/u/:shortURL", (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL];
-  res.redirect(longURL);
-});
-
+// SERVER LISTEN 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });

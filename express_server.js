@@ -68,6 +68,17 @@ function getLoggedInUser(req, res) {
 // MIDDLEWARE
 // check if cookie getLoggedInUser returns empty object then redirect to login page / deny access
 
+app.use(function (req, res, next) {
+  if (req.url === "/login" || req.url === "/register"){
+    next();
+  }
+  let user = getLoggedInUser(req, res)
+  console.log(req.url)
+  if (!user.hasOwnProperty("id")){
+    return res.redirect('/login');
+  }
+  next();
+})
 
 
 

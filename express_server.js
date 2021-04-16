@@ -68,17 +68,17 @@ function getLoggedInUser(req, res) {
 // MIDDLEWARE
 // check if cookie getLoggedInUser returns empty object then redirect to login page / deny access
 
-app.use(function (req, res, next) {
-  if (req.url === "/login" || req.url === "/register"){
-    next();
-  }
-  let user = getLoggedInUser(req, res)
-  console.log(req.url)
-  if (!user.hasOwnProperty("id")){
-    return res.redirect('/login');
-  }
-  next();
-})
+// app.use(function (req, res, next) {
+//   if (req.url === "/login" || req.url === "/register"){
+//     next();
+//   }
+//   let user = getLoggedInUser(req, res)
+//   //console.log("Hello here", req.url)
+//   if (!user.hasOwnProperty("id")){
+//     return res.redirect('/login');
+//   }
+//   next();
+// })
 
 
 
@@ -99,9 +99,13 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new", templateVars);
 });
 
-app.post("/urls", (req, res) => {
+app.post("/urls/new", (req, res) => {
   let user = getLoggedInUser(req, res);
   let shortURL = generateRandomString(6);
+  // TO DO: ("https://") use regex to validate whether long URL starts with https://
+  // if does not have https add to it before saving to database
+
+  //Saving to database
   urlDatabase[shortURL] = {
     longURL: req.body.longURL,
     userID: user.id
@@ -110,11 +114,17 @@ app.post("/urls", (req, res) => {
 });
 
 app.get("/urls/:shortURL", (req, res) => {
+  console.log("req.params", req.params);
+  console.log("urlDatabase", urlDatabase);
+  // req.params { shortURL: '3KMX3K' }
+  // urlDatabase { '3KMX3K': { longURL: 'google.com', userID: 'O7OniKoc' } }
+  
   const templateVars = { 
     shortURL: req.params.shortURL,
     longURL: urlDatabase[req.params.shortURL].longURL,
     user: getLoggedInUser(req, res)
   };
+  console.log(templateVars);
   res.render("urls_show", templateVars);
 });
 
@@ -128,6 +138,8 @@ app.post("/urls/:shortURL", (req, res) => {
 });
 
 app.get("/u/:shortURL", (req, res) => {
+  console.log("test urlDatabase", urlDatabase)
+  console.log("test req.params", req.params)
   const longURL = urlDatabase[req.params.shortURL].longURL;
   res.redirect(longURL);
 });
@@ -137,6 +149,13 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   delete urlDatabase[shortURL];
   res.redirect(`/urls`);
 });
+
+// EDIT
+// app.get("/urls/:shortURL/edit", (req, res) => {
+//   console.log("edit test")
+//   // let shortURL = req.params.shortURL;
+//   // res.redirect(`/urls`);
+//});
 
 
 // LOGIN ROUTE

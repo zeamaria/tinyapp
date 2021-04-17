@@ -49,14 +49,11 @@ function generateRandomString(length) {
 }
 
 // Checks if email is already in database
-function getUserByEmail(email, password) {
+function getUserByEmail(email) {
   // loop through users and check if email exists
   for (const key in users) {
     if(users[key].email === email) {
-      // email found, now check passwords match
-      if(users[key].password === password) {
-        return users[key];
-      }
+      return users[key];
     }
   }
   return false;
@@ -87,14 +84,14 @@ function getLoggedInUser(req, res) {
 // check if cookie getLoggedInUser returns empty object then redirect to login page / deny access
 app.use(function (req, res, next) {
   if (req.url === "/login" || req.url === "/register"){
-    next();
+    return next();
   }
   let user = getLoggedInUser(req, res)
   //console.log("Hello here", req.url)
   if (!user.hasOwnProperty("id")){
     return res.redirect('/login');
   }
-  next();
+  return next();
 })
 
 
@@ -194,14 +191,14 @@ app.get('/profile'), (req,res) =>{
 ///////////////////////////////////////////////////////////
 
 // Updates long URL with short URL by
-  // 1. define short url
-  // 2. take in the new url // replace old url
-  // 3. redirect to new url 
-  app.post("/urls/:shortURL", (req, res) => {
-    let shortURL = req.params.shortURL;
-    urlDatabase[shortURL].longURL = req.body.longURL;
-    res.redirect(`/urls`);
-  });
+// 1. define short url
+// 2. take in the new url // replace old url
+// 3. redirect to new url 
+app.post("/urls/:shortURL", (req, res) => {
+  let shortURL = req.params.shortURL;
+  urlDatabase[shortURL].longURL = req.body.longURL;
+  res.redirect(`/urls`);
+});
 
 // Creates a new shortlink and adds to :shortURL database
 app.post("/urls/new", (req, res) => {
@@ -227,21 +224,31 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 
 // Login as existing user
 app.post("/login", function (req, res) {
+  
   const email    = req.body.email;
-  const enterPassword = req.body.password  
-  const user = getUserByEmail(email, password);
+  const password = req.body.password;
+
   if( !email ){
-    return res.status(403).send("User email or password cannot be found. Please include both a valid username AND password!");
-  };
-  if ( !password ){
-    return res.status(403).send("Incorrect password");
-  } 
-  else if (!bcrypt.compareSync(req.body.password, getLoggedInUser.password)) {
-   return res.status(403).send('Incorrect Password! Please try again!')
-  } else {
-    res.cookie("user", user);
-    return res.redirect("/urls");
-  };
+    return res.status(403).send("Please enter an email!");
+  }
+  else if ( !password ){
+    return res.status(403).send("Please enter a password!");
+  }
+
+  const user = getUserByEmail(email);
+
+  if(!user) {
+    return res.status(403).send("No user found with that email!");
+  }
+
+  bcrypt.compare(password, user.password).then(function(result) {
+    if (!result) {
+      return res.status(403).send("Incorrect password. Please try again!")
+    } else {
+      res.cookie("user", user);
+      return res.redirect("/urls");
+    };
+  });
 });
 
 // Logout user and clear cookies
@@ -258,27 +265,24 @@ app.post("/logout", function (req, res) {
 // 4. check if someone tries to register with an email that is already in users object
 // 5. send back response with 400 status code
 app.post("/register", function (req, res) {
-  let email    = req.body.email;
+  let email      = req.body.email;
   let password = req.body.password;
 
-  const id = generateRandomString(8)
+  const id   = generateRandomString(8)
   const user = {id, email, password}
-
-  users[user.id] = user;
 
   if( !email || !password ){
     res.status(400).send("Please include both a valid email AND password!");
     return;
-  } 
+  }
+
   if (getUserByEmail(email)){
     res.status(400).send("I am sorry user already exists!");
     return;
   } else {
-    let password = bcrypt.hashSync(req.body.password, 10);  
-    users[id] = user
+    user.password = bcrypt.hashSync(password, 10);  
+    users[user.id] = user;
   };
-
- 
 
   res.cookie("user", user);
   res.redirect("/urls");

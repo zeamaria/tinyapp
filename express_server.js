@@ -77,6 +77,11 @@ function getLoggedInUser(req, res) {
   }
   return user;
 }
+// Returns the URLs where the userID is equal to the id of the currently logged-in user.
+function urlsForUser(id){
+
+}
+
 ///////////////////////////////////////////////////////////
 // MIDDLEWARE
 ///////////////////////////////////////////////////////////

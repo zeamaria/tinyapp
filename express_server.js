@@ -21,6 +21,8 @@ app.use(cookieSession({
   maxAge: 24 * 60 * 60 * 1000 // 24 hours
 }))
 
+const { getUserByEmail } = require("./helpers");
+
 ///////////////////////////////////////////////////////////
 // DATABASES
 ///////////////////////////////////////////////////////////
@@ -52,17 +54,6 @@ function generateRandomString(length) {
   let result = '';
   for (let i = length; i > 0; --i) result += chars[Math.floor(Math.random() * chars.length)];
   return result;
-}
-
-// Checks if email is already in database
-function getUserByEmail(email, database) {
-  // loop through users and check if email exists
-  for (const key in database) {
-    if(database[key].email === email) {
-      return database[key];
-    }
-  }
-  return false;
 }
 
 // Check if user is logged in by cookie

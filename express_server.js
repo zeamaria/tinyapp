@@ -28,18 +28,7 @@ const { getUserByEmail } = require("./helpers");
 ///////////////////////////////////////////////////////////
 
 // Database of user accounts 
-let users = { 
-  "userRandomID": {
-    id: "userRandomID", 
-    email: "user@example.com", 
-    password: "purple-monkey-dinosaur"
-  },
-  "user2RandomID": {
-    id: "user2RandomID", 
-    email: "user2@example.com", 
-    password: "dishwasher-funk"
-  }
-};
+let users = {};
 
 // Database of URLs
 const urlDatabase = {};
@@ -261,7 +250,6 @@ app.post("/logout", function (req, res) {
   req.session = null;
   res.redirect("/urls");
 });
-
 
 // Register new user
 // 1. create helper function to check for email in users object(getUserByEmail)

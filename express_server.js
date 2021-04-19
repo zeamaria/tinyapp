@@ -19,7 +19,7 @@ app.use(cookieSession({
 
   // Cookie Options
   maxAge: 24 * 60 * 60 * 1000 // 24 hours
-}))
+}));
 
 const { getUserByEmail } = require("./helpers");
 
@@ -54,7 +54,7 @@ function generateRandomString(length) {
   let result = '';
   for (let i = length; i > 0; --i) result += chars[Math.floor(Math.random() * chars.length)];
   return result;
-}
+};
 
 // Check if user is logged in by cookie
 // 1. Check if user cookie exists, if not return empty object (user)
@@ -73,7 +73,7 @@ function getLoggedInUser(req, res) {
     }
   }
   return user;
-}
+};
 
 // Returns the URLs where the userID is equal to the id of the currently logged-in user.
 function urlsForUser(id){
@@ -84,7 +84,7 @@ function urlsForUser(id){
     }
   }
   return urlDatabaseForUser;
-}
+};
 
 ///////////////////////////////////////////////////////////
 // MIDDLEWARE
@@ -106,8 +106,6 @@ app.use(function (req, res, next) {
   }
   return next();
 });
-
-
 
 ///////////////////////////////////////////////////////////
 // GET REQUESTS
@@ -154,14 +152,6 @@ app.get("/urls/:shortURL", (req, res) => {
   res.render("urls_show", templateVars);
 });
 
-// Shows a page where users can edit
-// app.get("/urls/:shortURL/edit", (req, res) => {
-//   console.log("edit test")
-//   // let shortURL = req.params.shortURL;
-//   // res.redirect(`/urls`);
-// }); ****is this a duplicate?****
-
-
 // Shows a page where a new user can register
 app.get('/register', (req,res) => {
   const templateVars = { 
@@ -201,8 +191,6 @@ app.get('/profile'), (req,res) =>{
 app.post("/urls/new", (req, res) => {
   let user = getLoggedInUser(req, res);
   let shortURL = generateRandomString(6);
-  // TO DO: ("https://") use regex to validate whether long URL starts with https://
-  // if does not have https add to it before saving to database
 
   urlDatabase[shortURL] = {
     shortURL: shortURL,
@@ -230,11 +218,11 @@ app.post("/urls/:shortURL", (req, res) => {
 // Delete :shortURL entry from database 
 app.post("/urls/:shortURL/delete", (req, res) => {
   // Check Short URL belongs to logged in user
+  let shortURL = req.params.shortURL;
   const loggedUser = getLoggedInUser(req, res);
   if(urlDatabase[shortURL].userID !== loggedUser.id) {
     return res.redirect(`/urls`);
   }
-  let shortURL = req.params.shortURL;
   delete urlDatabase[shortURL];
   res.redirect(`/urls`);
 });
@@ -306,17 +294,6 @@ app.post("/register", function (req, res) {
 });
 
 
-///////////////////////////////////////////////////////////
-// OLD ROUTES
-///////////////////////////////////////////////////////////
-
-app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
-});
-
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
-});
 
 ///////////////////////////////////////////////////////////
 // SERVER LISTEN 

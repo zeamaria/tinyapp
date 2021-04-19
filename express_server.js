@@ -12,8 +12,14 @@ app.set("view engine", "ejs");
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
 
-const cookieParser = require('cookie-parser');
-app.use(cookieParser());
+const cookieSession = require('cookie-session');
+app.use(cookieSession({
+  name: 'session',
+  keys: ['sghfigdifgdiuygfiudgfiudfyf98739dfh39'],
+
+  // Cookie Options
+  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+}))
 
 ///////////////////////////////////////////////////////////
 // DATABASES
@@ -49,11 +55,11 @@ function generateRandomString(length) {
 }
 
 // Checks if email is already in database
-function getUserByEmail(email) {
+function getUserByEmail(email, database) {
   // loop through users and check if email exists
-  for (const key in users) {
-    if(users[key].email === email) {
-      return users[key];
+  for (const key in database) {
+    if(database[key].email === email) {
+      return database[key];
     }
   }
   return false;
@@ -66,20 +72,27 @@ function getUserByEmail(email) {
 // Note: this allows us to not have to constantly clear cookie cache on browser
 function getLoggedInUser(req, res) {
   let user = {};
-  if(req.cookies.user && req.cookies.user !== "undefined" && typeof req.cookies.user !== "undefined") {
-    if(req.cookies.user.hasOwnProperty('id')) {
-      if(users[req.cookies.user.id]) {
-        user = req.cookies.user;
+  if(req.session.user && req.session.user !== "undefined" && typeof req.session.user !== "undefined") {
+    if(req.session.user.hasOwnProperty('id')) {
+      if(users[req.session.user.id]) {
+        user = req.session.user;
       } else {
-        res.clearCookie("user");
+        req.session = null;
       }
     }
   }
   return user;
 }
+
 // Returns the URLs where the userID is equal to the id of the currently logged-in user.
 function urlsForUser(id){
-
+  let urlDatabaseForUser = {};
+  for (const key in urlDatabase) {
+    if(urlDatabase[key].userID === id) {
+      urlDatabaseForUser[urlDatabase[key].shortURL] = urlDatabase[key];
+    }
+  }
+  return urlDatabaseForUser;
 }
 
 ///////////////////////////////////////////////////////////
@@ -91,13 +104,18 @@ app.use(function (req, res, next) {
   if (req.url === "/login" || req.url === "/register"){
     return next();
   }
+  if (req.url.split("/")[0] === 'u') {
+    // /u/:id have an array of two items, check first item.
+    return next();
+  }
   let user = getLoggedInUser(req, res)
   //console.log("Hello here", req.url)
   if (!user.hasOwnProperty("id")){
     return res.redirect('/login');
   }
   return next();
-})
+});
+
 
 
 ///////////////////////////////////////////////////////////
@@ -120,33 +138,28 @@ app.get("/urls/new", (req, res) => {
 
 // Redirect from shortlink to long URL associated with :shortURL in the database
 app.get("/u/:shortURL", (req, res) => {
-  console.log("test urlDatabase", urlDatabase)
-  console.log("test req.params", req.params)
   const longURL = urlDatabase[req.params.shortURL].longURL;
   res.redirect(longURL);
 });
 
 // Shows all URLS in list
 app.get("/urls", (req, res) => {
+  let loggedUser = getLoggedInUser(req, res);
+  let urlDatabaseForUser = urlsForUser(loggedUser.id);
   const templateVars = {
-    urls: urlDatabase,
-    user: getLoggedInUser(req, res)
+    urls: urlDatabaseForUser,
+    user: loggedUser
   };
   res.render("urls_index", templateVars);
 });
 
 // Shows a page where user can edit short URLS
 app.get("/urls/:shortURL", (req, res) => {
-  // console.log("req.params", req.params);
-  // console.log("urlDatabase", urlDatabase);
-  // // req.params { shortURL: '3KMX3K' }
-  // // urlDatabase { '3KMX3K': { longURL: 'google.com', userID: 'O7OniKoc' } }
   const templateVars = { 
     shortURL: req.params.shortURL,
-    longURL: urlDatabase[req.params.shortURL].longURL,
-    user: getLoggedInUser(req, res)
+    longURL:  urlDatabase[req.params.shortURL].longURL,
+    user:     getLoggedInUser(req, res)
   };
-  console.log(templateVars);
   res.render("urls_show", templateVars);
 });
 
@@ -177,12 +190,10 @@ app.get("/login",(req,res) => {
 
 // Shows a users profile page
 app.get('/profile'), (req,res) =>{
-  console.log("test req.cookies:", req.cookies)
-
-  if(users[req.cookies.user]){
+  if(users[req.session.user]){
     const templateVars = {
-      username:users[req.cookies.user],
-      testPassword: users[req.cookies.user]
+      username:users[req.session.user],
+      testPassword: users[req.session.user]
     };
     res.render('profile', templateVars);
   } else {
@@ -195,16 +206,6 @@ app.get('/profile'), (req,res) =>{
 // POST REQUESTS
 ///////////////////////////////////////////////////////////
 
-// Updates long URL with short URL by
-// 1. define short url
-// 2. take in the new url // replace old url
-// 3. redirect to new url 
-app.post("/urls/:shortURL", (req, res) => {
-  let shortURL = req.params.shortURL;
-  urlDatabase[shortURL].longURL = req.body.longURL;
-  res.redirect(`/urls`);
-});
-
 // Creates a new shortlink and adds to :shortURL database
 app.post("/urls/new", (req, res) => {
   let user = getLoggedInUser(req, res);
@@ -213,15 +214,35 @@ app.post("/urls/new", (req, res) => {
   // if does not have https add to it before saving to database
 
   urlDatabase[shortURL] = {
-    longURL: req.body.longURL,
-    userID: user.id
+    shortURL: shortURL,
+    longURL:  req.body.longURL,
+    userID:   user.id
   };
   res.redirect(`/urls/${shortURL}`);
 });
 
+// Updates long URL with short URL by
+// 1. define short url
+// 2. take in the new url // replace old url
+// 3. redirect to new url 
+app.post("/urls/:shortURL", (req, res) => {
+  // Check Short URL belongs to logged in user
+  const loggedUser = getLoggedInUser(req, res);
+  if(urlDatabase[shortURL].userID !== loggedUser.id) {
+    return res.redirect(`/urls`);
+  }
+  let shortURL = req.params.shortURL;
+  urlDatabase[shortURL].longURL = req.body.longURL;
+  return res.redirect(`/urls`);
+});
 
 // Delete :shortURL entry from database 
 app.post("/urls/:shortURL/delete", (req, res) => {
+  // Check Short URL belongs to logged in user
+  const loggedUser = getLoggedInUser(req, res);
+  if(urlDatabase[shortURL].userID !== loggedUser.id) {
+    return res.redirect(`/urls`);
+  }
   let shortURL = req.params.shortURL;
   delete urlDatabase[shortURL];
   res.redirect(`/urls`);
@@ -240,7 +261,7 @@ app.post("/login", function (req, res) {
     return res.status(403).send("Please enter a password!");
   }
 
-  const user = getUserByEmail(email);
+  const user = getUserByEmail(email, users);
 
   if(!user) {
     return res.status(403).send("No user found with that email!");
@@ -250,7 +271,7 @@ app.post("/login", function (req, res) {
     if (!result) {
       return res.status(403).send("Incorrect password. Please try again!")
     } else {
-      res.cookie("user", user);
+      req.session.user = user;
       return res.redirect("/urls");
     };
   });
@@ -258,7 +279,7 @@ app.post("/login", function (req, res) {
 
 // Logout user and clear cookies
 app.post("/logout", function (req, res) {
-  res.clearCookie("user");
+  req.session = null;
   res.redirect("/urls");
 });
 
@@ -281,7 +302,7 @@ app.post("/register", function (req, res) {
     return;
   }
 
-  if (getUserByEmail(email)){
+  if (getUserByEmail(email, users)){
     res.status(400).send("I am sorry user already exists!");
     return;
   } else {
@@ -289,7 +310,7 @@ app.post("/register", function (req, res) {
     users[user.id] = user;
   };
 
-  res.cookie("user", user);
+  req.session.user = user;
   res.redirect("/urls");
 });
 

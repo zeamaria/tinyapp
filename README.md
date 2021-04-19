@@ -4,11 +4,11 @@ TinyApp is a full stack web application built with Node and Express that allows 
 
 ## Final Product
 
-!["Register page for Tiny App "](1-register-page.png)
-!["Login Page"](2-login-page.png)
-!["Create a Tiny URL"](3-create-page.png)
-!["Edit your existing URLs"](4-edit-page.png)
-!["See all your URLs saved to your profile"](5-my-urls-page.png)
+!["Screenshot of Register page for Tiny App "](https://github.com/zeamaria/tinyapp/blob/feature/user-registration/docs/1-register-page.png)
+!["Screenshot of Login Page"](https://github.com/zeamaria/tinyapp/blob/feature/user-registration/docs/2-login-page.png)
+!["Create a Tiny URL"](https://github.com/zeamaria/tinyapp/blob/feature/user-registration/docs/3-create-page.png)
+!["Edit your existing URLs"](https://github.com/zeamaria/tinyapp/blob/feature/user-registration/docs/4-edit-page.png)
+!["See all your URLs saved to your profile"](https://github.com/zeamaria/tinyapp/blob/feature/user-registration/docs/5-my-urls-page.png)
 
 ## Dependencies
 

@@ -1,6 +1,4 @@
-///////////////////////////////////////////////////////////
 // CONFIGURE  
-///////////////////////////////////////////////////////////
 
 const express = require("express");
 const app = express();
@@ -23,19 +21,13 @@ app.use(cookieSession({
 
 const { getUserByEmail } = require("./helpers");
 
-///////////////////////////////////////////////////////////
 // DATABASES
-///////////////////////////////////////////////////////////
-
-// Database of user accounts 
+ 
 let users = {};
 
-// Database of URLs
 const urlDatabase = {};
 
-///////////////////////////////////////////////////////////
 // HELPER FUNCTIONS 
-///////////////////////////////////////////////////////////
 
 // Generates random string for User IDs and short URLS
 function generateRandomString(length) {
@@ -46,9 +38,6 @@ function generateRandomString(length) {
 };
 
 // Check if user is logged in by cookie
-// 1. Check if user cookie exists, if not return empty object (user)
-// 2. Check the cookie saved has a property of ID, if not return empty object (user)
-// 3. Check that the cookie user matches a user in the database, if not clear cookie & return empty object (user)
 // Note: this allows us to not have to constantly clear cookie cache on browser
 function getLoggedInUser(req, res) {
   let user = {};
@@ -75,9 +64,7 @@ function urlsForUser(id){
   return urlDatabaseForUser;
 };
 
-///////////////////////////////////////////////////////////
 // MIDDLEWARE
-///////////////////////////////////////////////////////////
 
 // check if cookie getLoggedInUser returns empty object then redirect to login page / deny access
 app.use(function (req, res, next) {
@@ -89,16 +76,15 @@ app.use(function (req, res, next) {
     return next();
   }
   let user = getLoggedInUser(req, res)
-  //console.log("Hello here", req.url)
+  
   if (!user.hasOwnProperty("id")){
-    return res.redirect('/login');
+    //return res.redirect('/login');
   }
   return next();
 });
 
-///////////////////////////////////////////////////////////
+
 // GET REQUESTS
-///////////////////////////////////////////////////////////
 
 // Shows homepage
 app.get("/", (req, res) => {
@@ -171,10 +157,7 @@ app.get('/profile'), (req,res) =>{
   }
 };
  
-
-///////////////////////////////////////////////////////////
 // POST REQUESTS
-///////////////////////////////////////////////////////////
 
 // Creates a new shortlink and adds to :shortURL database
 app.post("/urls/new", (req, res) => {
@@ -189,24 +172,19 @@ app.post("/urls/new", (req, res) => {
   res.redirect(`/urls/${shortURL}`);
 });
 
-// Updates long URL with short URL by
-// 1. define short url
-// 2. take in the new url // replace old url
-// 3. redirect to new url 
+// Updates long URL with short URL
 app.post("/urls/:shortURL", (req, res) => {
-  // Check Short URL belongs to logged in user
   const loggedUser = getLoggedInUser(req, res);
+  const shortURL = req.params.shortURL;
   if(urlDatabase[shortURL].userID !== loggedUser.id) {
     return res.redirect(`/urls`);
   }
-  let shortURL = req.params.shortURL;
   urlDatabase[shortURL].longURL = req.body.longURL;
   return res.redirect(`/urls`);
 });
 
 // Delete :shortURL entry from database 
 app.post("/urls/:shortURL/delete", (req, res) => {
-  // Check Short URL belongs to logged in user
   let shortURL = req.params.shortURL;
   const loggedUser = getLoggedInUser(req, res);
   if(urlDatabase[shortURL].userID !== loggedUser.id) {
@@ -218,7 +196,6 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 
 // Login as existing user
 app.post("/login", function (req, res) {
-  
   const email    = req.body.email;
   const password = req.body.password;
 
@@ -252,11 +229,6 @@ app.post("/logout", function (req, res) {
 });
 
 // Register new user
-// 1. create helper function to check for email in users object(getUserByEmail)
-// 2. check if email or pw are empty/ exists
-// 3. send back response with 400 status code
-// 4. check if someone tries to register with an email that is already in users object
-// 5. send back response with 400 status code
 app.post("/register", function (req, res) {
   let email      = req.body.email;
   let password = req.body.password;
@@ -282,10 +254,7 @@ app.post("/register", function (req, res) {
 });
 
 
-
-///////////////////////////////////////////////////////////
 // SERVER LISTEN 
-///////////////////////////////////////////////////////////
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);

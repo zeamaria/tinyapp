@@ -19,50 +19,14 @@ app.use(cookieSession({
   maxAge: 24 * 60 * 60 * 1000 // 24 hours
 }));
 
-const { getUserByEmail } = require("./helpers");
+const { getUserByEmail, urlsForUser, getLoggedInUser, generateRandomString } = require("./helpers");
+
 
 // DATABASES
  
 let users = {};
 
 const urlDatabase = {};
-
-// HELPER FUNCTIONS 
-
-// Generates random string for User IDs and short URLS
-function generateRandomString(length) {
-  let chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  let result = '';
-  for (let i = length; i > 0; --i) result += chars[Math.floor(Math.random() * chars.length)];
-  return result;
-};
-
-// Check if user is logged in by cookie
-// Note: this allows us to not have to constantly clear cookie cache on browser
-function getLoggedInUser(req, res) {
-  let user = {};
-  if(req.session.user && req.session.user !== "undefined" && typeof req.session.user !== "undefined") {
-    if(req.session.user.hasOwnProperty('id')) {
-      if(users[req.session.user.id]) {
-        user = req.session.user;
-      } else {
-        req.session = null;
-      }
-    }
-  }
-  return user;
-};
-
-// Returns the URLs where the userID is equal to the id of the currently logged-in user.
-function urlsForUser(id){
-  let urlDatabaseForUser = {};
-  for (const key in urlDatabase) {
-    if(urlDatabase[key].userID === id) {
-      urlDatabaseForUser[urlDatabase[key].shortURL] = urlDatabase[key];
-    }
-  }
-  return urlDatabaseForUser;
-};
 
 // MIDDLEWARE
 
@@ -75,10 +39,9 @@ app.use(function (req, res, next) {
     // /u/:id have an array of two items, check first item.
     return next();
   }
-  let user = getLoggedInUser(req, res)
+  let user = getLoggedInUser(req, users)
   
   if (!user.hasOwnProperty("id")){
-    //return res.redirect('/login');
   }
   return next();
 });
@@ -95,7 +58,7 @@ app.get("/", (req, res) => {
 // must be placed above /urls/:shortURL route (otherwise express will think its a new route param)
 app.get("/urls/new", (req, res) => {
   const templateVars = { 
-    user: getLoggedInUser(req, res)
+    user: getLoggedInUser(req, users)
   };
   res.render("urls_new", templateVars);
 });
@@ -108,8 +71,8 @@ app.get("/u/:shortURL", (req, res) => {
 
 // Shows all URLS in list
 app.get("/urls", (req, res) => {
-  let loggedUser = getLoggedInUser(req, res);
-  let urlDatabaseForUser = urlsForUser(loggedUser.id);
+  let loggedUser = getLoggedInUser(req, users);
+  let urlDatabaseForUser = urlsForUser(loggedUser.id, urlDatabase);
   const templateVars = {
     urls: urlDatabaseForUser,
     user: loggedUser
@@ -119,10 +82,21 @@ app.get("/urls", (req, res) => {
 
 // Shows a page where user can edit short URLS
 app.get("/urls/:shortURL", (req, res) => {
+  // Check if real short code
+  const details = urlDatabase[req.params.shortURL];
+  if(!details) {
+    res.redirect("/urls");
+  }
+  // Get logged in user
+  let loggedUser = getLoggedInUser(req, users);
+  // Check short code belongs to user
+  if(loggedUser.id !== details.userID) {
+    res.redirect("/urls");
+  }
   const templateVars = { 
     shortURL: req.params.shortURL,
     longURL:  urlDatabase[req.params.shortURL].longURL,
-    user:     getLoggedInUser(req, res)
+    user:     loggedUser
   };
   res.render("urls_show", templateVars);
 });
@@ -161,7 +135,7 @@ app.get('/profile'), (req,res) =>{
 
 // Creates a new shortlink and adds to :shortURL database
 app.post("/urls/new", (req, res) => {
-  let user = getLoggedInUser(req, res);
+  let user = getLoggedInUser(req, users);
   let shortURL = generateRandomString(6);
 
   urlDatabase[shortURL] = {
@@ -174,7 +148,7 @@ app.post("/urls/new", (req, res) => {
 
 // Updates long URL with short URL
 app.post("/urls/:shortURL", (req, res) => {
-  const loggedUser = getLoggedInUser(req, res);
+  const loggedUser = getLoggedInUser(req, users);
   const shortURL = req.params.shortURL;
   if(urlDatabase[shortURL].userID !== loggedUser.id) {
     return res.redirect(`/urls`);
@@ -186,7 +160,7 @@ app.post("/urls/:shortURL", (req, res) => {
 // Delete :shortURL entry from database 
 app.post("/urls/:shortURL/delete", (req, res) => {
   let shortURL = req.params.shortURL;
-  const loggedUser = getLoggedInUser(req, res);
+  const loggedUser = getLoggedInUser(req, users);
   if(urlDatabase[shortURL].userID !== loggedUser.id) {
     return res.redirect(`/urls`);
   }

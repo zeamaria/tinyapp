@@ -119,10 +119,21 @@ app.get("/urls", (req, res) => {
 
 // Shows a page where user can edit short URLS
 app.get("/urls/:shortURL", (req, res) => {
+  // Check if real short code
+  const details = urlDatabase[req.params.shortURL];
+  if(!details) {
+    res.redirect("/urls");
+  }
+  // Get logged in user
+  let loggedUser = getLoggedInUser(req, res);
+  // Check short code belongs to user
+  if(loggedUser.id !== details.userID) {
+    res.redirect("/urls");
+  }
   const templateVars = { 
     shortURL: req.params.shortURL,
     longURL:  urlDatabase[req.params.shortURL].longURL,
-    user:     getLoggedInUser(req, res)
+    user:     loggedUser
   };
   res.render("urls_show", templateVars);
 });
@@ -134,7 +145,6 @@ app.get('/register', (req,res) => {
   };
   res.render("register", templateVars);
 });
-
 
 // Shows login page for existing users
 app.get("/login",(req,res) => {

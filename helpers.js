@@ -1,5 +1,7 @@
 // HELPER FUNCTIONS 
 
+// TESTING HELLO 
+
 // Generates random string for User IDs and short URLS
 function generateRandomString(length) {
   let chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
